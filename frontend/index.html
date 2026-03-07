@@ -308,7 +308,7 @@
 <div class="footer">Government of Maharashtra · Export Trade Dashboard · Data Source: Sample.xlsx &nbsp;|&nbsp; <span>FY 2025–26</span> · Apr–Dec 2025 &nbsp;|&nbsp; For official use only</div>
 
 <script>
-const API = 'https://maharashtra-dashboard.onrender.com/api';
+const API = 'http://localhost:5000/api';
 let trendChart = null, productChart = null;
 let districtDataCache = {};   // district name -> data object
 let geoJsonLoaded = false;
@@ -473,96 +473,252 @@ async function loadDistricts(f) {
   await renderDistrictMap(data);
 }
 
-// ── SELF-CONTAINED BUBBLE MAP (no external fetch needed) ──
-const DISTRICT_COORDS = {
-  "Ahmednagar":          [74.75, 19.08], "Akola":               [77.07, 20.71],
-  "Amravati":            [77.75, 20.93], "Beed":                [75.76, 18.99],
-  "Bhandara":            [79.65, 21.17], "Buldhana":            [76.18, 20.53],
-  "Chandrapur":          [79.30, 19.96], "Chh. Sambhaji Nagar": [75.34, 19.88],
-  "Dharashiv":           [76.04, 18.18], "Dhule":               [74.78, 20.90],
-  "Gadchiroli":          [80.00, 20.18], "Gondia":              [80.20, 21.46],
-  "Hingoli":             [77.15, 19.72], "Jalgaon":             [75.56, 21.00],
-  "Jalna":               [75.88, 19.84], "Kolhapur":            [74.24, 16.69],
-  "Latur":               [76.57, 18.40], "Mumbai":              [72.87, 18.96],
-  "Mumbai Suburban":     [72.95, 19.12], "Nagpur":              [79.09, 21.15],
-  "Nanded":              [77.32, 19.15], "Nandurbar":           [74.24, 21.37],
-  "Nashik":              [73.79, 20.00], "Palghar":             [72.77, 19.70],
-  "Parbhani":            [76.77, 19.27], "Pune":                [73.86, 18.52],
-  "Raigad":              [73.18, 18.52], "Ratnagiri":           [73.30, 17.00],
-  "Sangli":              [74.57, 16.86], "Satara":              [74.00, 17.68],
-  "Sindhudurg":          [73.98, 16.35], "Solapur":             [75.91, 17.68],
-  "Thane":               [73.02, 19.22], "Wardha":              [78.60, 20.75],
-  "Washim":              [77.13, 20.11], "Yavatmal":            [78.12, 20.39],
+// ── SELF-CONTAINED CHOROPLETH MAP ──
+const MH_PATHS = {
+  "Nandurbar": "M 166.5,41.9 L 111.2,116.1 L 44.5,90.6 L 8.6,6.7 L 71.4,6.7 L 242.6,6.7 Z",
+  "Dhule": "M 176.0,127.8 L 166.5,41.9 L 111.2,116.1 L 138.8,151.6 Z",
+  "Jalgaon": "M 197.2,132.6 L 176.0,127.8 L 166.5,41.9 L 242.6,6.7 L 267.5,6.7 L 261.1,6.7 L 245.3,58.6 Z",
+  "Buldhana": "M 248.8,161.4 L 258.6,135.5 L 245.3,58.6 L 197.2,132.6 L 199.8,136.5 Z",
+  "Akola": "M 245.3,58.6 L 261.1,6.7 L 307.4,129.8 L 258.6,135.5 Z",
+  "Washim": "M 250.0,167.8 L 317.8,163.7 L 310.2,132.3 L 307.4,129.8 L 258.6,135.5 L 248.8,161.4 Z",
+  "Amravati": "M 261.1,6.7 L 267.5,6.7 L 306.7,6.7 L 353.2,54.7 L 344.1,105.2 L 310.2,132.3 L 307.4,129.8 Z",
+  "Wardha": "M 401.2,123.3 L 353.2,54.7 L 344.1,105.2 L 373.9,151.5 Z",
+  "Nagpur": "M 401.2,123.3 L 413.7,120.7 L 409.9,6.7 L 342.5,6.7 L 306.7,6.7 L 353.2,54.7 Z",
+  "Bhandara": "M 413.7,120.7 L 409.9,6.7 L 459.6,106.3 L 419.8,122.7 Z",
+  "Gondia": "M 342.5,6.7 L 451.7,6.7 L 511.4,62.9 L 511.4,161.5 L 459.6,106.3 L 409.9,6.7 Z",
+  "Gadchiroli": "M 419.8,122.7 L 459.6,106.3 L 511.4,161.5 L 511.4,368.6 L 511.4,453.3 Z",
+  "Chandrapur": "M 357.3,204.7 L 373.9,151.5 L 401.2,123.3 L 413.7,120.7 L 419.8,122.7 L 511.4,453.3 L 496.2,453.3 L 436.9,431.7 Z",
+  "Yavatmal": "M 357.3,204.7 L 373.9,151.5 L 344.1,105.2 L 310.2,132.3 L 317.8,163.7 L 329.8,184.0 Z",
+  "Hingoli": "M 249.9,169.1 L 282.0,200.7 L 329.8,184.0 L 317.8,163.7 L 250.0,167.8 Z",
+  "Parbhani": "M 249.9,169.1 L 282.0,200.7 L 274.2,241.9 L 238.6,232.4 L 231.5,202.6 Z",
+  "Nanded": "M 357.3,204.7 L 436.9,431.7 L 274.2,241.9 L 282.0,200.7 L 329.8,184.0 Z",
+  "Latur": "M 228.4,248.6 L 249.3,307.3 L 488.8,453.3 L 496.2,453.3 L 436.9,431.7 L 274.2,241.9 L 238.6,232.4 Z",
+  "Dharashiv": "M 228.4,248.6 L 249.3,307.3 L 166.9,282.3 L 173.9,270.6 Z",
+  "Beed": "M 196.0,196.7 L 178.8,206.2 L 173.9,270.6 L 228.4,248.6 L 238.6,232.4 L 231.5,202.6 Z",
+  "Jalna": "M 249.9,169.1 L 231.5,202.6 L 196.0,196.7 L 199.8,136.5 L 248.8,161.4 L 250.0,167.8 Z",
+  "Chh. Sambhaji Nagar": "M 196.0,196.7 L 178.8,206.2 L 137.6,170.7 L 138.8,151.6 L 176.0,127.8 L 197.2,132.6 L 199.8,136.5 Z",
+  "Nashik": "M 106.3,208.7 L 137.6,170.7 L 138.8,151.6 L 111.2,116.1 L 44.5,90.6 L 67.3,181.0 L 92.1,209.5 Z",
+  "Ahmednagar": "M 143.9,278.5 L 106.3,208.7 L 137.6,170.7 L 178.8,206.2 L 173.9,270.6 L 166.9,282.3 L 160.3,288.7 Z",
+  "Solapur": "M 160.3,288.7 L 166.9,282.3 L 249.3,307.3 L 488.8,453.3 L 409.8,453.3 L 364.8,453.3 L 160.3,311.0 Z",
+  "Pune": "M 78.3,291.2 L 78.3,228.9 L 92.1,209.5 L 106.3,208.7 L 143.9,278.5 Z",
+  "Satara": "M 78.3,291.2 L 143.9,278.5 L 160.3,288.7 L 160.3,311.0 L 116.3,346.6 L 97.8,351.8 L 62.4,309.3 Z",
+  "Sangli": "M 116.3,346.6 L 152.2,427.9 L 355.9,453.3 L 364.8,453.3 L 160.3,311.0 Z",
+  "Kolhapur": "M 97.8,351.8 L 91.6,373.8 L 152.2,427.9 L 116.3,346.6 Z",
+  "Sindhudurg": "M 91.6,373.8 L 8.6,453.3 L 67.2,453.3 L 355.9,453.3 L 152.2,427.9 Z",
+  "Ratnagiri": "M 62.4,309.3 L 8.6,318.9 L 8.6,373.6 L 8.6,394.0 L 8.6,453.3 L 91.6,373.8 L 97.8,351.8 Z",
+  "Raigad": "M 78.3,291.2 L 78.3,228.9 L 67.8,231.7 L 61.5,234.5 L 8.6,318.9 L 62.4,309.3 Z",
+  "Thane": "M 92.1,209.5 L 67.3,181.0 L 31.9,202.5 L 67.8,231.7 L 78.3,228.9 Z",
+  "Mumbai Suburban": "M 67.8,231.7 L 31.9,202.5 L 16.2,208.1 L 61.5,234.5 Z",
+  "Mumbai": "M 61.5,234.5 L 8.6,318.9 L 8.6,373.6 L 8.6,250.9 L 16.2,208.1 Z",
+  "Palghar": "M 31.9,202.5 L 67.3,181.0 L 44.5,90.6 L 8.6,6.7 L 8.6,59.6 L 8.6,250.9 L 16.2,208.1 Z"
+};
+const MH_CENTROIDS = {
+  "Nandurbar": [
+    119.42857142857108,
+    68.66666666666669
+  ],
+  "Dhule": [
+    150.28571428571428,
+    100.00000000000018
+  ],
+  "Jalgaon": [
+    194.8571428571429,
+    93.33333333333343
+  ],
+  "Buldhana": [
+    230.28571428571453,
+    124.66666666666669
+  ],
+  "Akola": [
+    281.1428571428566,
+    112.6666666666667
+  ],
+  "Washim": [
+    284.5714285714281,
+    152.66666666666677
+  ],
+  "Amravati": [
+    319.9999999999998,
+    98.00000000000011
+  ],
+  "Wardha": [
+    368.57142857142804,
+    110.00000000000009
+  ],
+  "Nagpur": [
+    396.5714285714285,
+    83.33333333333351
+  ],
+  "Bhandara": [
+    428.5714285714286,
+    81.99999999999997
+  ],
+  "Gondia": [
+    459.9999999999999,
+    62.6666666666667
+  ],
+  "Gadchiroli": [
+    448.57142857142827,
+    148.0000000000001
+  ],
+  "Chandrapur": [
+    408.57142857142816,
+    162.66666666666669
+  ],
+  "Yavatmal": [
+    341.14285714285717,
+    134.00000000000006
+  ],
+  "Hingoli": [
+    285.71428571428584,
+    178.66666666666683
+  ],
+  "Parbhani": [
+    263.9999999999996,
+    208.66666666666677
+  ],
+  "Nanded": [
+    295.4285714285709,
+    216.66666666666683
+  ],
+  "Latur": [
+    252.57142857142802,
+    266.66666666666686
+  ],
+  "Dharashiv": [
+    222.2857142857145,
+    281.3333333333334
+  ],
+  "Beed": [
+    206.28571428571445,
+    227.3333333333335
+  ],
+  "Jalna": [
+    213.14285714285674,
+    170.66666666666677
+  ],
+  "Chh. Sambhaji Nagar": [
+    182.28571428571436,
+    168.00000000000014
+  ],
+  "Nashik": [
+    93.71428571428602,
+    160.00000000000009
+  ],
+  "Ahmednagar": [
+    148.5714285714285,
+    221.3333333333335
+  ],
+  "Solapur": [
+    214.85714285714255,
+    314.66666666666674
+  ],
+  "Pune": [
+    97.71428571428562,
+    258.66666666666674
+  ],
+  "Satara": [
+    105.71428571428567,
+    314.66666666666674
+  ],
+  "Sangli": [
+    138.28571428571382,
+    369.3333333333334
+  ],
+  "Kolhapur": [
+    119.42857142857108,
+    380.66666666666663
+  ],
+  "Sindhudurg": [
+    104.57142857142874,
+    403.33333333333326
+  ],
+  "Ratnagiri": [
+    65.71428571428552,
+    360.00000000000006
+  ],
+  "Raigad": [
+    58.85714285714322,
+    258.66666666666674
+  ],
+  "Thane": [
+    49.71428571428547,
+    212.00000000000017
+  ],
+  "Mumbai Suburban": [
+    45.714285714285865,
+    218.66666666666669
+  ],
+  "Mumbai": [
+    41.14285714285739,
+    229.33333333333337
+  ],
+  "Palghar": [
+    35.42857142857119,
+    180.00000000000014
+  ]
 };
 
 async function renderDistrictMap(districtData) {
   const container = document.getElementById('map-container');
   const loading = document.getElementById('map-loading');
   d3.select('#map-container svg').remove();
-
   loading.style.display = 'none';
 
   const W = container.offsetWidth || 340;
-  const H = 360;
+  const H = 400;
 
   const values = districtData.map(d => d.total_export);
   const maxVal = d3.max(values) || 1;
   const minVal = d3.min(values) || 0;
 
-  // Color scale: light blue to dark navy
   const colorScale = d3.scaleSequential().domain([minVal, maxVal]).interpolator(d3.interpolateBlues);
-  // Radius scale
-  const rScale = d3.scaleSqrt().domain([0, maxVal]).range([6, 26]);
 
-  // Map lon/lat to SVG x/y
-  // Maharashtra lon: 72.5 to 80.9, lat: 15.5 to 22.1
-  const lonMin = 72.4, lonMax = 80.9, latMin = 15.4, latMax = 22.2;
-  const pad = 24;
-  function toX(lon) { return pad + (lon - lonMin) / (lonMax - lonMin) * (W - pad*2); }
-  function toY(lat) { return pad + (latMax - lat) / (latMax - latMin) * (H - pad*2); }
+  const dataMap = {};
+  districtData.forEach(d => { dataMap[d.district] = d; });
+
+  // Scale paths from 520x460 viewBox to container size
+  const scaleX = W / 520;
+  const scaleY = H / 460;
+
+  function scalePath(pathStr) {
+    return pathStr.replace(/(-?[\d.]+),(-?[\d.]+)/g, (_, x, y) =>
+      `${(parseFloat(x) * scaleX).toFixed(1)},${(parseFloat(y) * scaleY).toFixed(1)}`
+    );
+  }
 
   const svg = d3.select('#map-container')
     .insert('svg', '#map-legend')
     .attr('viewBox', `0 0 ${W} ${H}`)
     .attr('preserveAspectRatio', 'xMidYMid meet')
-    .style('background', '#e8eef6');
-
-  // Background state outline (approximate Maharashtra bounding box shape)
-  svg.append('rect').attr('x', pad-8).attr('y', pad-8)
-    .attr('width', W-pad*2+16).attr('height', H-pad*2+16)
-    .attr('rx', 10).attr('fill', '#d6e4f0').attr('stroke', '#b0c8e0').attr('stroke-width', 1.5);
+    .style('background', '#e8f0f8');
 
   const tooltip = document.getElementById('map-tooltip');
 
-  // Build lookup
-  const dataMap = {};
-  districtData.forEach(d => { dataMap[d.district] = d; });
-
-  // Draw bubbles
-  const nodes = Object.entries(DISTRICT_COORDS).map(([name, [lon, lat]]) => ({
-    name, lon, lat, x: toX(lon), y: toY(lat),
-    data: dataMap[name] || null,
-    val: dataMap[name] ? dataMap[name].total_export : 0
-  }));
-
-  // Bubble circles
-  svg.selectAll('.bubble')
-    .data(nodes)
-    .enter().append('circle')
-    .attr('class', 'bubble')
-    .attr('cx', d => d.x).attr('cy', d => d.y)
-    .attr('r', d => d.val > 0 ? rScale(d.val) : 5)
-    .attr('fill', d => d.val > 0 ? colorScale(d.val) : '#c8daea')
-    .attr('stroke', '#fff').attr('stroke-width', 1.2)
+  // Draw district paths
+  const districtNames = Object.keys(MH_PATHS);
+  svg.selectAll('.district-path')
+    .data(districtNames)
+    .enter()
+    .append('path')
+    .attr('class', 'district-path')
+    .attr('d', name => scalePath(MH_PATHS[name]))
+    .attr('fill', name => {
+      const d = dataMap[name];
+      return d ? colorScale(d.total_export) : '#c8daea';
+    })
+    .attr('stroke', '#fff')
+    .attr('stroke-width', 1.2)
     .style('cursor', 'pointer')
-    .on('mousemove', function(event, d) {
+    .on('mousemove', function(event, name) {
       d3.select(this).attr('stroke', '#f15a22').attr('stroke-width', 2.5);
-      document.getElementById('tt-district').textContent = d.name;
-      document.getElementById('tt-region').textContent = d.data ? d.data.region : 'No data';
-      document.getElementById('tt-total').textContent = d.data ? '₹ ' + fmt(d.data.total_export) + ' Mn' : '—';
-      document.getElementById('tt-dec').textContent = d.data ? '₹ ' + fmt(d.data.dec_export) + ' Mn' : '—';
-      document.getElementById('tt-mom').textContent = d.data ? (d.data.mom_growth >= 0 ? '+' : '') + d.data.mom_growth + '%' : '—';
-      document.getElementById('tt-share').textContent = d.data ? d.data.share + '%' : '—';
+      const d = dataMap[name];
+      document.getElementById('tt-district').textContent = name;
+      document.getElementById('tt-region').textContent = d ? d.region : 'No data';
+      document.getElementById('tt-total').textContent = d ? '₹ ' + fmt(d.total_export) + ' Mn' : '—';
+      document.getElementById('tt-dec').textContent = d ? '₹ ' + fmt(d.dec_export) + ' Mn' : '—';
+      document.getElementById('tt-mom').textContent = d ? (d.mom_growth >= 0 ? '+' : '') + d.mom_growth + '%' : '—';
+      document.getElementById('tt-share').textContent = d ? d.share + '%' : '—';
       tooltip.style.display = 'block';
       tooltip.style.left = (event.clientX + 14) + 'px';
       tooltip.style.top = (event.clientY - 10) + 'px';
@@ -571,30 +727,34 @@ async function renderDistrictMap(districtData) {
       d3.select(this).attr('stroke', '#fff').attr('stroke-width', 1.2);
       tooltip.style.display = 'none';
     })
-    .on('click', function(event, d) {
+    .on('click', function(event, name) {
       const sel = document.getElementById('filter-district');
       for (let i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === d.name) { sel.selectedIndex = i; break; }
+        if (sel.options[i].value === name) { sel.selectedIndex = i; break; }
       }
+      applyFilters();
     });
 
-  // Labels (short name inside bubble for larger ones)
-  svg.selectAll('.bubble-label')
-    .data(nodes)
-    .enter().append('text')
-    .attr('class', 'bubble-label')
-    .attr('x', d => d.x).attr('y', d => d.y + 1)
-    .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-    .style('font-size', d => rScale(d.val) > 14 ? '6px' : '5px')
+  // District name labels
+  svg.selectAll('.d-label')
+    .data(districtNames)
+    .enter()
+    .append('text')
+    .attr('class', 'd-label')
+    .attr('x', name => (MH_CENTROIDS[name][0] * scaleX))
+    .attr('y', name => (MH_CENTROIDS[name][1] * scaleY))
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'middle')
+    .style('font-size', '6.5px')
     .style('font-family', 'Noto Sans, Arial, sans-serif')
-    .style('fill', '#fff').style('font-weight', '700')
+    .style('fill', name => {
+      const d = dataMap[name];
+      const val = d ? d.total_export : 0;
+      return val > (maxVal * 0.5) ? '#fff' : '#1a2940';
+    })
+    .style('font-weight', '600')
     .style('pointer-events', 'none')
-    .text(d => {
-      const r = rScale(d.val || 0);
-      if (r < 8) return '';
-      const short = d.name.split(' ')[0];
-      return short.length > 7 ? short.substring(0,6) : short;
-    });
+    .text(name => name.split(' ')[0].substring(0, 8));
 
   document.getElementById('map-legend').style.display = 'flex';
 }
