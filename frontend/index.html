@@ -257,17 +257,11 @@
             </div>
           </div>
           <div class="map-legend" id="map-legend" style="display:none;">
-            <span style="font-weight:700;color:var(--navy);margin-right:4px;">Export Value:</span>
-            <div class="legend-bar">
-              <div class="legend-swatch" style="background:#e8eef6;"></div>
-              <span>Low</span>
-            </div>
-            <div style="width:80px;height:10px;border-radius:2px;background:linear-gradient(90deg,#c6dbef,#084594);"></div>
-            <div class="legend-bar">
-              <div class="legend-swatch" style="background:#084594;"></div>
-              <span>High</span>
-            </div>
-            <span style="margin-left:8px;color:#888;">| Hover district for details</span>
+            <span style="font-weight:700;color:var(--navy);margin-right:6px;">Export Value:</span>
+            <div class="legend-bar"><div style="width:10px;height:10px;border-radius:50%;background:#c6dbef;border:1px solid #aaa;"></div><span>Low</span></div>
+            <div style="width:60px;height:8px;border-radius:4px;background:linear-gradient(90deg,#c6dbef,#084594);margin:0 4px;"></div>
+            <div class="legend-bar"><div style="width:14px;height:14px;border-radius:50%;background:#084594;border:1px solid #aaa;"></div><span>High</span></div>
+            <span style="margin-left:8px;color:#888;font-size:10px;">Bubble size = export volume · Hover for details · Click to filter</span>
           </div>
         </div>
 
@@ -314,7 +308,7 @@
 <div class="footer">Government of Maharashtra · Export Trade Dashboard · Data Source: Sample.xlsx &nbsp;|&nbsp; <span>FY 2025–26</span> · Apr–Dec 2025 &nbsp;|&nbsp; For official use only</div>
 
 <script>
-const API = 'https://maharashtra-dashboard.onrender.com/api';
+const API = 'http://localhost:5000/api';
 let trendChart = null, productChart = null;
 let districtDataCache = {};   // district name -> data object
 let geoJsonLoaded = false;
@@ -479,140 +473,130 @@ async function loadDistricts(f) {
   await renderDistrictMap(data);
 }
 
-// ── D3 CHOROPLETH MAP ──
+// ── SELF-CONTAINED BUBBLE MAP (no external fetch needed) ──
+const DISTRICT_COORDS = {
+  "Ahmednagar":          [74.75, 19.08], "Akola":               [77.07, 20.71],
+  "Amravati":            [77.75, 20.93], "Beed":                [75.76, 18.99],
+  "Bhandara":            [79.65, 21.17], "Buldhana":            [76.18, 20.53],
+  "Chandrapur":          [79.30, 19.96], "Chh. Sambhaji Nagar": [75.34, 19.88],
+  "Dharashiv":           [76.04, 18.18], "Dhule":               [74.78, 20.90],
+  "Gadchiroli":          [80.00, 20.18], "Gondia":              [80.20, 21.46],
+  "Hingoli":             [77.15, 19.72], "Jalgaon":             [75.56, 21.00],
+  "Jalna":               [75.88, 19.84], "Kolhapur":            [74.24, 16.69],
+  "Latur":               [76.57, 18.40], "Mumbai":              [72.87, 18.96],
+  "Mumbai Suburban":     [72.95, 19.12], "Nagpur":              [79.09, 21.15],
+  "Nanded":              [77.32, 19.15], "Nandurbar":           [74.24, 21.37],
+  "Nashik":              [73.79, 20.00], "Palghar":             [72.77, 19.70],
+  "Parbhani":            [76.77, 19.27], "Pune":                [73.86, 18.52],
+  "Raigad":              [73.18, 18.52], "Ratnagiri":           [73.30, 17.00],
+  "Sangli":              [74.57, 16.86], "Satara":              [74.00, 17.68],
+  "Sindhudurg":          [73.98, 16.35], "Solapur":             [75.91, 17.68],
+  "Thane":               [73.02, 19.22], "Wardha":              [78.60, 20.75],
+  "Washim":              [77.13, 20.11], "Yavatmal":            [78.12, 20.39],
+};
+
 async function renderDistrictMap(districtData) {
   const container = document.getElementById('map-container');
   const loading = document.getElementById('map-loading');
-
-  // Clear previous map
   d3.select('#map-container svg').remove();
 
-  // Build value lookup
-  const valueMap = {};
-  districtData.forEach(d => { valueMap[d.district] = d.total_export; });
+  loading.style.display = 'none';
+
+  const W = container.offsetWidth || 340;
+  const H = 360;
+
   const values = districtData.map(d => d.total_export);
   const maxVal = d3.max(values) || 1;
+  const minVal = d3.min(values) || 0;
 
-  // Color scale: light blue → dark navy
-  const colorScale = d3.scaleSequential()
-    .domain([0, maxVal])
-    .interpolator(d3.interpolateBlues);
+  // Color scale: light blue to dark navy
+  const colorScale = d3.scaleSequential().domain([minVal, maxVal]).interpolator(d3.interpolateBlues);
+  // Radius scale
+  const rScale = d3.scaleSqrt().domain([0, maxVal]).range([6, 26]);
 
-  // No-data color
-  const noDataColor = '#dde8f0';
+  // Map lon/lat to SVG x/y
+  // Maharashtra lon: 72.5 to 80.9, lat: 15.5 to 22.1
+  const lonMin = 72.4, lonMax = 80.9, latMin = 15.4, latMax = 22.2;
+  const pad = 24;
+  function toX(lon) { return pad + (lon - lonMin) / (lonMax - lonMin) * (W - pad*2); }
+  function toY(lat) { return pad + (latMax - lat) / (latMax - latMin) * (H - pad*2); }
 
-  try {
-    // Fetch GeoJSON
-    const geoUrl = 'https://raw.githubusercontent.com/datameet/maps/master/Districts/maharashtra.geojson';
-    const geo = await fetch(geoUrl).then(r => {
-      if (!r.ok) throw new Error('GeoJSON fetch failed');
-      return r.json();
+  const svg = d3.select('#map-container')
+    .insert('svg', '#map-legend')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('background', '#e8eef6');
+
+  // Background state outline (approximate Maharashtra bounding box shape)
+  svg.append('rect').attr('x', pad-8).attr('y', pad-8)
+    .attr('width', W-pad*2+16).attr('height', H-pad*2+16)
+    .attr('rx', 10).attr('fill', '#d6e4f0').attr('stroke', '#b0c8e0').attr('stroke-width', 1.5);
+
+  const tooltip = document.getElementById('map-tooltip');
+
+  // Build lookup
+  const dataMap = {};
+  districtData.forEach(d => { dataMap[d.district] = d; });
+
+  // Draw bubbles
+  const nodes = Object.entries(DISTRICT_COORDS).map(([name, [lon, lat]]) => ({
+    name, lon, lat, x: toX(lon), y: toY(lat),
+    data: dataMap[name] || null,
+    val: dataMap[name] ? dataMap[name].total_export : 0
+  }));
+
+  // Bubble circles
+  svg.selectAll('.bubble')
+    .data(nodes)
+    .enter().append('circle')
+    .attr('class', 'bubble')
+    .attr('cx', d => d.x).attr('cy', d => d.y)
+    .attr('r', d => d.val > 0 ? rScale(d.val) : 5)
+    .attr('fill', d => d.val > 0 ? colorScale(d.val) : '#c8daea')
+    .attr('stroke', '#fff').attr('stroke-width', 1.2)
+    .style('cursor', 'pointer')
+    .on('mousemove', function(event, d) {
+      d3.select(this).attr('stroke', '#f15a22').attr('stroke-width', 2.5);
+      document.getElementById('tt-district').textContent = d.name;
+      document.getElementById('tt-region').textContent = d.data ? d.data.region : 'No data';
+      document.getElementById('tt-total').textContent = d.data ? '₹ ' + fmt(d.data.total_export) + ' Mn' : '—';
+      document.getElementById('tt-dec').textContent = d.data ? '₹ ' + fmt(d.data.dec_export) + ' Mn' : '—';
+      document.getElementById('tt-mom').textContent = d.data ? (d.data.mom_growth >= 0 ? '+' : '') + d.data.mom_growth + '%' : '—';
+      document.getElementById('tt-share').textContent = d.data ? d.data.share + '%' : '—';
+      tooltip.style.display = 'block';
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top = (event.clientY - 10) + 'px';
+    })
+    .on('mouseleave', function() {
+      d3.select(this).attr('stroke', '#fff').attr('stroke-width', 1.2);
+      tooltip.style.display = 'none';
+    })
+    .on('click', function(event, d) {
+      const sel = document.getElementById('filter-district');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === d.name) { sel.selectedIndex = i; break; }
+      }
     });
 
-    loading.style.display = 'none';
+  // Labels (short name inside bubble for larger ones)
+  svg.selectAll('.bubble-label')
+    .data(nodes)
+    .enter().append('text')
+    .attr('class', 'bubble-label')
+    .attr('x', d => d.x).attr('y', d => d.y + 1)
+    .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+    .style('font-size', d => rScale(d.val) > 14 ? '6px' : '5px')
+    .style('font-family', 'Noto Sans, Arial, sans-serif')
+    .style('fill', '#fff').style('font-weight', '700')
+    .style('pointer-events', 'none')
+    .text(d => {
+      const r = rScale(d.val || 0);
+      if (r < 8) return '';
+      const short = d.name.split(' ')[0];
+      return short.length > 7 ? short.substring(0,6) : short;
+    });
 
-    const W = container.offsetWidth || 360;
-    const H = 360;
-
-    const svg = d3.select('#map-container')
-      .insert('svg', '.map-legend')
-      .attr('viewBox', `0 0 ${W} ${H}`)
-      .attr('preserveAspectRatio', 'xMidYMid meet');
-
-    const projection = d3.geoMercator().fitSize([W, H], geo);
-    const pathGen = d3.geoPath().projection(projection);
-    const tooltip = document.getElementById('map-tooltip');
-
-    svg.selectAll('.district-path')
-      .data(geo.features)
-      .enter()
-      .append('path')
-      .attr('class', 'district-path')
-      .attr('d', pathGen)
-      .attr('fill', feat => {
-        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
-        const ourName = NAME_MAP[geoName] || geoName;
-        const val = valueMap[ourName];
-        return val !== undefined ? colorScale(val) : noDataColor;
-      })
-      .on('mousemove', function(event, feat) {
-        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
-        const ourName = NAME_MAP[geoName] || geoName;
-        const d = districtDataCache[ourName];
-
-        document.getElementById('tt-district').textContent = ourName || geoName;
-        document.getElementById('tt-region').textContent = d ? d.region : 'District data';
-        document.getElementById('tt-total').textContent = d ? '₹ ' + fmt(d.total_export) + ' Mn' : 'No data';
-        document.getElementById('tt-dec').textContent = d ? '₹ ' + fmt(d.dec_export) + ' Mn' : '—';
-        document.getElementById('tt-mom').textContent = d ? (d.mom_growth >= 0 ? '+' : '') + d.mom_growth + '%' : '—';
-        document.getElementById('tt-share').textContent = d ? d.share + '%' : '—';
-
-        tooltip.style.display = 'block';
-        tooltip.style.left = (event.clientX + 14) + 'px';
-        tooltip.style.top = (event.clientY - 10) + 'px';
-      })
-      .on('mouseleave', function() {
-        tooltip.style.display = 'none';
-      })
-      .on('click', function(event, feat) {
-        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
-        const ourName = NAME_MAP[geoName] || geoName;
-        // Highlight clicked district in filter
-        const sel = document.getElementById('filter-district');
-        for (let i = 0; i < sel.options.length; i++) {
-          if (sel.options[i].value === ourName) { sel.selectedIndex = i; break; }
-        }
-      });
-
-    // District labels for larger districts
-    svg.selectAll('.district-label')
-      .data(geo.features)
-      .enter()
-      .append('text')
-      .attr('class', 'district-label')
-      .attr('transform', feat => {
-        const c = pathGen.centroid(feat);
-        return `translate(${c[0]},${c[1]})`;
-      })
-      .attr('text-anchor', 'middle')
-      .attr('dy', '0.35em')
-      .style('font-size', '6px')
-      .style('font-family', 'Noto Sans, Arial, sans-serif')
-      .style('fill', '#fff')
-      .style('font-weight', '600')
-      .style('pointer-events', 'none')
-      .style('text-shadow', '0 0 3px rgba(0,0,0,0.8)')
-      .text(feat => {
-        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
-        const ourName = NAME_MAP[geoName] || geoName;
-        const val = valueMap[ourName];
-        // Only show label if district has area big enough
-        const bounds = pathGen.bounds(feat);
-        const w = bounds[1][0] - bounds[0][0];
-        return w > 20 ? ourName.split(' ')[0] : '';
-      });
-
-    document.getElementById('map-legend').style.display = 'flex';
-    geoJsonLoaded = true;
-
-  } catch (err) {
-    console.warn('Map load failed:', err);
-    loading.style.display = 'none';
-    // Fallback: show a clean district value list instead
-    container.innerHTML = `
-      <div class="map-error">
-        <div style="font-size:13px;font-weight:700;color:#003366;margin-bottom:12px;">📊 District Export Values</div>
-        <div style="max-height:320px;overflow-y:auto;">
-          ${districtData.slice(0,15).map((d,i) => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 16px;border-bottom:1px solid #edf2f7;font-size:11px;">
-              <span style="font-weight:600;color:#1a2940;">${i+1}. ${d.district}</span>
-              <span style="font-family:'Noto Sans Mono',monospace;color:#f15a22;font-weight:700;">₹${fmt(d.total_export)} Mn</span>
-            </div>
-          `).join('')}
-        </div>
-        <div style="font-size:10px;color:#999;margin-top:8px;">Map requires internet connection to load GeoJSON</div>
-      </div>`;
-  }
+  document.getElementById('map-legend').style.display = 'flex';
 }
 
 // ── PRODUCTS ──
