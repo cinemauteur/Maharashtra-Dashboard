@@ -6,12 +6,13 @@
 <title>Maharashtra Export Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <style>
   :root {
     --navy:#003366;--navy-dark:#002244;--navy-light:#e8eef6;
-    --orange:#f15a22;--orange-lt:#fff2ec;--saffron:#ff9933;
-    --green-ind:#138808;--white:#ffffff;--bg:#f0f4f8;
-    --surface:#ffffff;--border:#d0dae8;--text:#1a2940;--muted:#5a6e88;
+    --orange:#f15a22;--saffron:#ff9933;--green-ind:#138808;
+    --bg:#f0f4f8;--surface:#ffffff;--border:#d0dae8;
+    --text:#1a2940;--muted:#5a6e88;
     --green:#1a7a2e;--green-bg:#e8f5eb;--red:#c0392b;--red-bg:#fdecea;
     --shadow:0 2px 12px rgba(0,51,102,0.10);--shadow-lg:0 4px 24px rgba(0,51,102,0.13);
   }
@@ -19,7 +20,7 @@
   body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;}
   .tricolor-strip{height:4px;background:linear-gradient(90deg,var(--saffron) 33.3%,#fff 33.3%,#fff 66.6%,var(--green-ind) 66.6%);}
   .header{background:var(--navy);padding:0 28px;display:flex;align-items:center;height:64px;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,0.25);}
-  .header-emblem{width:44px;height:44px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+  .header-emblem{width:44px;height:44px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
   .header-title-main{font-size:16px;font-weight:700;color:#fff;letter-spacing:0.5px;}
   .header-subtitle{font-size:11px;color:rgba(255,255,255,0.65);margin-top:1px;}
   .header-right{text-align:right;font-size:11px;color:rgba(255,255,255,0.6);line-height:1.6;margin-left:auto;}
@@ -31,10 +32,10 @@
   .filter-bar{background:var(--surface);border-bottom:2px solid var(--border);padding:12px 28px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;box-shadow:var(--shadow);}
   .filter-label-top{font-size:10px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;}
   .filter-select{border:1.5px solid var(--border);border-radius:5px;background:#fff;color:var(--text);font-family:'Noto Sans',sans-serif;font-size:12px;padding:7px 28px 7px 10px;appearance:none;cursor:pointer;min-width:165px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23003366' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color 0.2s;}
-  .filter-select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,51,102,0.1);}
-  .btn-apply{background:var(--orange);color:#fff;border:none;border-radius:5px;padding:8px 22px;font-family:'Noto Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(241,90,34,0.3);transition:background 0.2s;}
+  .filter-select:focus{outline:none;border-color:var(--navy);}
+  .btn-apply{background:var(--orange);color:#fff;border:none;border-radius:5px;padding:8px 22px;font-family:'Noto Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.2s;}
   .btn-apply:hover{background:#d44e1a;}
-  .btn-reset{background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:5px;padding:7px 16px;font-family:'Noto Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:border-color 0.2s;}
+  .btn-reset{background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:5px;padding:7px 16px;font-family:'Noto Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;}
   .btn-reset:hover{border-color:var(--navy);}
   .view-tabs{margin-left:auto;display:flex;border:1.5px solid var(--border);border-radius:5px;overflow:hidden;background:#fff;}
   .view-tab{padding:7px 18px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);border:none;background:transparent;font-family:'Noto Sans',sans-serif;border-right:1px solid var(--border);transition:background 0.15s,color 0.15s;}
@@ -54,7 +55,7 @@
   .kpi-badge.up{background:var(--green-bg);color:var(--green);}
   .kpi-badge.down{background:var(--red-bg);color:var(--red);}
   .kpi-icon{position:absolute;top:14px;right:16px;font-size:28px;opacity:0.1;}
-  .content-grid{display:grid;grid-template-columns:1fr 320px;gap:16px;}
+  .content-grid{display:grid;grid-template-columns:1fr 360px;gap:16px;}
   .left-col{display:flex;flex-direction:column;gap:16px;}
   .right-col{display:flex;flex-direction:column;gap:16px;}
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);}
@@ -63,8 +64,78 @@
   .panel-badge{font-size:10px;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.12);padding:2px 8px;border-radius:20px;font-weight:600;}
   .panel-body{padding:14px 18px;}
   .chart-wrap{position:relative;height:210px;}
-  .map-area{background:var(--navy-light);border-radius:6px;display:flex;align-items:center;justify-content:center;min-height:270px;border:1px solid var(--border);overflow:hidden;}
-  .map-area svg{max-height:270px;width:100%;}
+
+  /* ── MAP STYLES ── */
+  #map-container{
+    background: var(--navy-light);
+    border-radius:6px;
+    border:1px solid var(--border);
+    position:relative;
+    overflow:hidden;
+    min-height:360px;
+  }
+  #map-container svg { width:100%; height:100%; display:block; }
+  .district-path {
+    stroke: #fff;
+    stroke-width: 0.8;
+    cursor: pointer;
+    transition: opacity 0.15s, stroke-width 0.15s;
+  }
+  .district-path:hover { stroke-width: 2; stroke: #f15a22; opacity: 0.85; }
+  .district-path.highlighted { stroke: #f15a22; stroke-width: 2.5; }
+
+  /* Tooltip */
+  #map-tooltip {
+    position: fixed;
+    background: rgba(0,33,66,0.97);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'Noto Sans', sans-serif;
+    pointer-events: none;
+    display: none;
+    z-index: 9999;
+    border-left: 3px solid #f15a22;
+    min-width: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  #map-tooltip .tt-district { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  #map-tooltip .tt-region { font-size: 10px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+  #map-tooltip .tt-row { display:flex; justify-content:space-between; gap:16px; margin-bottom:2px; }
+  #map-tooltip .tt-label { color: rgba(255,255,255,0.65); font-size: 11px; }
+  #map-tooltip .tt-val { font-family:'Noto Sans Mono',monospace; font-size:11px; font-weight:600; color:#ffa657; }
+
+  /* Legend */
+  .map-legend {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.95);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .legend-bar {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+  }
+  .legend-swatch {
+    width: 22px; height: 10px; border-radius: 2px;
+  }
+  .map-loading {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    text-align:center; color:var(--muted); font-size:12px;
+  }
+  .map-error {
+    padding: 20px; text-align:center; color:var(--muted); font-size:12px;
+    line-height: 1.8;
+  }
+
+  /* TABLE */
   .table-wrap{overflow-x:auto;}
   table{width:100%;border-collapse:collapse;font-size:12px;}
   thead th{padding:9px 12px;text-align:left;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;background:var(--navy);border-right:1px solid rgba(255,255,255,0.1);white-space:nowrap;}
@@ -94,12 +165,23 @@
   .loading{display:flex;align-items:center;justify-content:center;height:60px;color:var(--muted);font-size:12px;gap:8px;}
   .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin 0.7s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  .footer{background:var(--navy-dark);color:rgba(255,255,255,0.45);text-align:center;font-size:10px;padding:10px;margin-top:16px;letter-spacing:0.3px;}
+  .footer{background:var(--navy-dark);color:rgba(255,255,255,0.45);text-align:center;font-size:10px;padding:10px;margin-top:16px;}
   .footer span{color:var(--saffron);}
   @media(max-width:900px){.content-grid{grid-template-columns:1fr;}.header-right{display:none;}}
 </style>
 </head>
 <body>
+
+<!-- TOOLTIP (global) -->
+<div id="map-tooltip">
+  <div class="tt-district" id="tt-district"></div>
+  <div class="tt-region" id="tt-region"></div>
+  <div class="tt-row"><span class="tt-label">Total Export</span><span class="tt-val" id="tt-total"></span></div>
+  <div class="tt-row"><span class="tt-label">Dec '25</span><span class="tt-val" id="tt-dec"></span></div>
+  <div class="tt-row"><span class="tt-label">MoM Growth</span><span class="tt-val" id="tt-mom"></span></div>
+  <div class="tt-row"><span class="tt-label">Share</span><span class="tt-val" id="tt-share"></span></div>
+</div>
+
 <div class="tricolor-strip"></div>
 <div class="header">
   <div class="header-emblem">🏛️</div>
@@ -113,10 +195,12 @@
     <div id="last-updated" style="color:rgba(255,255,255,0.35);font-size:10px;margin-top:2px;"></div>
   </div>
 </div>
+
 <div class="ticker-bar">
   <span class="ticker-label">LIVE</span>
   <span class="ticker-inner" id="ticker-text">Loading regional data...</span>
 </div>
+
 <div class="filter-bar">
   <div><div class="filter-label-top">📍 Region / Division</div><select class="filter-select" id="filter-region"><option>Loading...</option></select></div>
   <div><div class="filter-label-top">🏙️ District</div><select class="filter-select" id="filter-district"><option>Loading...</option></select></div>
@@ -129,7 +213,9 @@
     <button class="view-tab" onclick="switchView('products',this)">Commodity</button>
   </div>
 </div>
+
 <div class="breadcrumb">🏠 Home &nbsp;›&nbsp; <span>Maharashtra</span> &nbsp;›&nbsp; <span id="bc-region">All Regions</span> &nbsp;›&nbsp; <span id="bc-district">All Districts</span></div>
+
 <div class="main">
   <div class="kpi-row">
     <div class="kpi-card" style="--accent-color:#003366;"><div class="kpi-icon">📊</div><div class="kpi-label">Total Export Value (Apr–Dec '25)</div><div class="kpi-value" id="kpi-total">—</div><div class="kpi-sub">₹ in Millions · Maharashtra State</div></div>
@@ -138,6 +224,7 @@
     <div class="kpi-card" style="--accent-color:#ff9933;"><div class="kpi-icon">📦</div><div class="kpi-label">Commodity Categories</div><div class="kpi-value" id="kpi-products">—</div><div class="kpi-sub">Unique Products / Commodities</div></div>
   </div>
 
+  <!-- OVERVIEW VIEW -->
   <div id="view-overview">
     <div class="content-grid">
       <div class="left-col">
@@ -146,7 +233,7 @@
           <div class="panel-body"><div class="chart-wrap"><canvas id="chart-trend"></canvas></div></div>
         </div>
         <div class="panel">
-          <div class="panel-header"><span class="panel-title">🗺️ Region-wise Export Summary — Value · Share</span><span class="panel-badge">7 Regions</span></div>
+          <div class="panel-header"><span class="panel-title">🗺️ Region-wise Export Summary</span><span class="panel-badge">7 Regions</span></div>
           <div class="table-wrap">
             <table>
               <thead><tr><th>#</th><th>Region / Division</th><th class="num">Total Apr–Dec (₹ Mn)</th><th class="num">Dec '25</th><th class="num">Nov '25</th><th class="num">MoM Growth %</th><th class="num">% Share</th></tr></thead>
@@ -155,47 +242,35 @@
           </div>
         </div>
       </div>
+
+      <!-- RIGHT COLUMN: MAP + PRODUCTS -->
       <div class="right-col">
         <div class="panel">
-          <div class="panel-header"><span class="panel-title">🗺️ Geographical Overview</span><span class="panel-badge">Maharashtra · India</span></div>
-          <div class="panel-body" style="padding:10px;">
-            <div class="map-area">
-              <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
-                <rect width="500" height="400" fill="#e8eef6"/>
-                <ellipse cx="160" cy="110" rx="72" ry="52" fill="#003366" fill-opacity="0.78" stroke="#fff" stroke-width="1.5"/>
-                <text x="160" y="106" text-anchor="middle" fill="#fff" font-size="9" font-family="Noto Sans" font-weight="700">NASHIK</text>
-                <text x="160" y="119" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="8" font-family="Noto Sans">REGION</text>
-                <ellipse cx="320" cy="95" rx="78" ry="52" fill="#f15a22" fill-opacity="0.85" stroke="#fff" stroke-width="1.5"/>
-                <text x="320" y="91" text-anchor="middle" fill="#fff" font-size="9" font-family="Noto Sans" font-weight="700">AMRAVATI</text>
-                <text x="320" y="104" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="8" font-family="Noto Sans">REGION</text>
-                <ellipse cx="432" cy="115" rx="58" ry="48" fill="#138808" fill-opacity="0.82" stroke="#fff" stroke-width="1.5"/>
-                <text x="432" y="111" text-anchor="middle" fill="#fff" font-size="9" font-family="Noto Sans" font-weight="700">NAGPUR</text>
-                <text x="432" y="124" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="8" font-family="Noto Sans">REGION</text>
-                <ellipse cx="285" cy="200" rx="82" ry="52" fill="#ff9933" fill-opacity="0.85" stroke="#fff" stroke-width="1.5"/>
-                <text x="285" y="194" text-anchor="middle" fill="#fff" font-size="8" font-family="Noto Sans" font-weight="700">CHH. SAMBHAJI</text>
-                <text x="285" y="207" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="8" font-family="Noto Sans">NAGAR REGION</text>
-                <ellipse cx="155" cy="240" rx="78" ry="57" fill="#0070c0" fill-opacity="0.78" stroke="#fff" stroke-width="1.5"/>
-                <text x="155" y="236" text-anchor="middle" fill="#fff" font-size="9" font-family="Noto Sans" font-weight="700">PUNE</text>
-                <text x="155" y="249" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="8" font-family="Noto Sans">REGION</text>
-                <ellipse cx="60" cy="275" rx="44" ry="82" fill="#6f42c1" fill-opacity="0.75" stroke="#fff" stroke-width="1.5"/>
-                <text x="60" y="271" text-anchor="middle" fill="#fff" font-size="9" font-family="Noto Sans" font-weight="700">KONKAN</text>
-                <text x="60" y="284" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="8" font-family="Noto Sans">REGION</text>
-                <ellipse cx="76" cy="165" rx="40" ry="36" fill="#dc3545" fill-opacity="0.85" stroke="#fff" stroke-width="1.5"/>
-                <text x="76" y="161" text-anchor="middle" fill="#fff" font-size="8" font-family="Noto Sans" font-weight="700">MUMBAI</text>
-                <text x="76" y="174" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="8" font-family="Noto Sans">REGION</text>
-                <rect x="0" y="362" width="500" height="38" fill="#fff" fill-opacity="0.92"/>
-                <text x="10" y="376" fill="#5a6e88" font-size="8" font-family="Noto Sans" font-weight="700">LEGEND:</text>
-                <circle cx="62" cy="373" r="5" fill="#003366"/><text x="71" y="377" fill="#1a2940" font-size="8" font-family="Noto Sans">Nashik</text>
-                <circle cx="118" cy="373" r="5" fill="#f15a22"/><text x="127" y="377" fill="#1a2940" font-size="8" font-family="Noto Sans">Amravati</text>
-                <circle cx="182" cy="373" r="5" fill="#138808"/><text x="191" y="377" fill="#1a2940" font-size="8" font-family="Noto Sans">Nagpur</text>
-                <circle cx="240" cy="373" r="5" fill="#ff9933"/><text x="249" y="377" fill="#1a2940" font-size="8" font-family="Noto Sans">Chh. Sambhaji</text>
-                <circle cx="325" cy="373" r="5" fill="#0070c0"/><text x="334" y="377" fill="#1a2940" font-size="8" font-family="Noto Sans">Pune</text>
-                <circle cx="374" cy="373" r="5" fill="#6f42c1"/><text x="383" y="377" fill="#1a2940" font-size="8" font-family="Noto Sans">Konkan</text>
-                <circle cx="426" cy="373" r="5" fill="#dc3545"/><text x="435" y="377" fill="#1a2940" font-size="8" font-family="Noto Sans">Mumbai</text>
-              </svg>
+          <div class="panel-header">
+            <span class="panel-title">🗺️ District Export Map — Maharashtra</span>
+            <span class="panel-badge" id="map-filter-label">All Districts</span>
+          </div>
+          <div id="map-container" style="min-height:360px;">
+            <div class="map-loading" id="map-loading">
+              <div class="spinner" style="margin:0 auto 8px;"></div>
+              Loading district map...
             </div>
           </div>
+          <div class="map-legend" id="map-legend" style="display:none;">
+            <span style="font-weight:700;color:var(--navy);margin-right:4px;">Export Value:</span>
+            <div class="legend-bar">
+              <div class="legend-swatch" style="background:#e8eef6;"></div>
+              <span>Low</span>
+            </div>
+            <div style="width:80px;height:10px;border-radius:2px;background:linear-gradient(90deg,#c6dbef,#084594);"></div>
+            <div class="legend-bar">
+              <div class="legend-swatch" style="background:#084594;"></div>
+              <span>High</span>
+            </div>
+            <span style="margin-left:8px;color:#888;">| Hover district for details</span>
+          </div>
         </div>
+
         <div class="panel">
           <div class="panel-header"><span class="panel-title">📦 Top Exports — Value · Share</span><span class="panel-badge">Commodity View</span></div>
           <div class="panel-body" style="padding-top:10px;"><div id="product-list"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
@@ -204,18 +279,20 @@
     </div>
   </div>
 
+  <!-- DISTRICTS VIEW -->
   <div id="view-districts" style="display:none;">
     <div class="panel">
       <div class="panel-header"><span class="panel-title">🏙️ Districts / UT — Export Summary</span><span class="panel-badge" id="district-count-badge">Loading...</span></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>District</th><th>Region</th><th class="num">Total Apr–Dec (₹ Mn)</th><th class="num">Dec '25</th><th class="num">Nov '25</th><th class="num">MoM Growth %</th><th class="num">% Share in Total Exports</th></tr></thead>
+          <thead><tr><th>#</th><th>District</th><th>Region</th><th class="num">Total Apr–Dec (₹ Mn)</th><th class="num">Dec '25</th><th class="num">Nov '25</th><th class="num">MoM Growth %</th><th class="num">% Share</th></tr></thead>
           <tbody id="district-table-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr></tbody>
         </table>
       </div>
     </div>
   </div>
 
+  <!-- PRODUCTS VIEW -->
   <div id="view-products" style="display:none;">
     <div class="content-grid">
       <div class="left-col">
@@ -233,86 +310,343 @@
     </div>
   </div>
 </div>
+
 <div class="footer">Government of Maharashtra · Export Trade Dashboard · Data Source: Sample.xlsx &nbsp;|&nbsp; <span>FY 2025–26</span> · Apr–Dec 2025 &nbsp;|&nbsp; For official use only</div>
 
 <script>
-const API='https://maharashtra-dashboard.onrender.com/api';
-let trendChart=null,productChart=null;
-const REGION_COLORS={'Nashik Region':'#003366','Amravati Region':'#f15a22','Nagpur Region':'#138808','Chh. Sambhaji Nagar Region':'#ff9933','Pune Region':'#0070c0','Konkan Region':'#6f42c1','Mumbai Region':'#dc3545'};
-const COLORS=['#003366','#f15a22','#138808','#ff9933','#0070c0','#6f42c1','#dc3545','#17a2b8','#6c757d','#20c997'];
+const API = 'http://localhost:5000/api';
+let trendChart = null, productChart = null;
+let districtDataCache = {};   // district name -> data object
+let geoJsonLoaded = false;
 
-async function init(){
-  document.getElementById('last-updated').textContent='Updated: '+new Date().toLocaleString('en-IN');
-  await loadFilters();await loadAll();
+// Name mapping: GeoJSON name -> our Excel name
+const NAME_MAP = {
+  'Ahmadnagar':           'Ahmednagar',
+  'Aurangabad':           'Chh. Sambhaji Nagar',
+  'Osmanabad':            'Dharashiv',
+  'Greater Mumbai':       'Mumbai',
+  'Mumbai Suburban':      'Mumbai Suburban',
+  'Nashik':               'Nashik',
+  'Pune':                 'Pune',
+  'Nagpur':               'Nagpur',
+  'Thane':                'Thane',
+  'Raigad':               'Raigad',
+  'Ratnagiri':            'Ratnagiri',
+  'Sindhudurg':           'Sindhudurg',
+  'Kolhapur':             'Kolhapur',
+  'Sangli':               'Sangli',
+  'Satara':               'Satara',
+  'Solapur':              'Solapur',
+  'Latur':                'Latur',
+  'Nanded':               'Nanded',
+  'Hingoli':              'Hingoli',
+  'Parbhani':             'Parbhani',
+  'Jalna':                'Jalna',
+  'Beed':                 'Beed',
+  'Dhule':                'Dhule',
+  'Jalgaon':              'Jalgaon',
+  'Nandurbar':            'Nandurbar',
+  'Amravati':             'Amravati',
+  'Akola':                'Akola',
+  'Buldhana':             'Buldhana',
+  'Washim':               'Washim',
+  'Yavatmal':             'Yavatmal',
+  'Wardha':               'Wardha',
+  'Chandrapur':           'Chandrapur',
+  'Gadchiroli':           'Gadchiroli',
+  'Gondia':               'Gondia',
+  'Bhandara':             'Bhandara',
+  'Palghar':              'Palghar',
+};
+
+const REGION_COLORS = {
+  'Nashik Region':'#003366','Amravati Region':'#f15a22','Nagpur Region':'#138808',
+  'Chh. Sambhaji Nagar Region':'#ff9933','Pune Region':'#0070c0',
+  'Konkan Region':'#6f42c1','Mumbai Region':'#dc3545'
+};
+const COLORS = ['#003366','#f15a22','#138808','#ff9933','#0070c0','#6f42c1','#dc3545','#17a2b8','#6c757d','#20c997'];
+
+// ── INIT ──
+async function init() {
+  document.getElementById('last-updated').textContent = 'Updated: ' + new Date().toLocaleString('en-IN');
+  await loadFilters();
+  await loadAll();
 }
-async function loadFilters(){
-  const d=await fetch(`${API}/filters`).then(r=>r.json()).catch(()=>null);
-  if(!d)return;
-  populateSelect('filter-region',d.regions);populateSelect('filter-district',d.districts);populateSelect('filter-product',d.products);
+
+async function loadFilters() {
+  const d = await fetch(`${API}/filters`).then(r => r.json()).catch(() => null);
+  if (!d) return;
+  populateSelect('filter-region', d.regions);
+  populateSelect('filter-district', d.districts);
+  populateSelect('filter-product', d.products);
 }
-function populateSelect(id,opts){document.getElementById(id).innerHTML=opts.map(o=>`<option value="${o}">${o}</option>`).join('');}
-function getFilters(){return{region:document.getElementById('filter-region').value,district:document.getElementById('filter-district').value,product:document.getElementById('filter-product').value};}
-function qs(p){return'?'+new URLSearchParams(p).toString();}
-async function loadAll(){const f=getFilters();updateBreadcrumb(f);await Promise.all([loadSummary(f),loadTrend(f),loadRegions(f),loadProducts(f),loadDistricts(f),updateTicker(f)]);}
-async function applyFilters(){await loadAll();}
-function resetFilters(){document.getElementById('filter-region').value='All';document.getElementById('filter-district').value='All';document.getElementById('filter-product').value='All';loadAll();}
-function updateBreadcrumb(f){document.getElementById('bc-region').textContent=f.region==='All'?'All Regions':f.region;document.getElementById('bc-district').textContent=f.district==='All'?'All Districts':f.district;}
-async function updateTicker(f){
-  const r=await fetch(`${API}/regions${qs(f)}`).then(r=>r.json()).catch(()=>[]);
-  if(!r.length)return;
-  const top=r[0];
-  document.getElementById('ticker-text').textContent=`🏆 Highest Exporting Region: ${top.region} — ₹${fmt(top.total_export)} Mn     |     `+r.map(x=>`${x.region}: ₹${fmt(x.total_export)} Mn (Share: ${x.share}%,  MoM: ${x.mom_growth>=0?'+':''}${x.mom_growth}%)`).join('     |     ');
+function populateSelect(id, opts) {
+  document.getElementById(id).innerHTML = opts.map(o => `<option value="${o}">${o}</option>`).join('');
 }
-async function loadSummary(f){
-  const d=await fetch(`${API}/summary${qs(f)}`).then(r=>r.json()).catch(()=>null);if(!d)return;
-  document.getElementById('kpi-total').textContent='₹ '+fmt(d.total_export);
-  document.getElementById('kpi-latest').textContent='₹ '+fmt(d.latest_month);
-  document.getElementById('kpi-districts').textContent=d.num_districts;
-  document.getElementById('kpi-products').textContent=d.num_products;
-  const s=d.mom_growth>=0?'+':'',cls=d.mom_growth>=0?'up':'down',a=d.mom_growth>=0?'▲':'▼';
-  document.getElementById('kpi-growth-badge').innerHTML=`<div class="kpi-badge ${cls}">${a} ${s}${d.mom_growth}% compared to Nov '25</div>`;
+function getFilters() {
+  return {
+    region: document.getElementById('filter-region').value,
+    district: document.getElementById('filter-district').value,
+    product: document.getElementById('filter-product').value,
+  };
 }
-async function loadTrend(f){
-  const data=await fetch(`${API}/monthly-trend${qs(f)}`).then(r=>r.json()).catch(()=>null);if(!data)return;
-  if(trendChart){trendChart.destroy();trendChart=null;}
-  const ctx=document.getElementById('chart-trend').getContext('2d');
-  const grad=ctx.createLinearGradient(0,0,0,210);grad.addColorStop(0,'rgba(0,51,102,0.18)');grad.addColorStop(1,'rgba(0,51,102,0.01)');
-  trendChart=new Chart(ctx,{type:'line',data:{labels:data.map(d=>d.month),datasets:[{label:'Export Value (₹ Mn)',data:data.map(d=>d.value),borderColor:'#003366',backgroundColor:grad,borderWidth:2.5,tension:0.4,fill:true,pointBackgroundColor:'#f15a22',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:5,pointHoverRadius:7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#003366',titleColor:'#fff',bodyColor:'rgba(255,255,255,0.8)',borderColor:'#f15a22',borderWidth:1,padding:10,callbacks:{label:ctx=>'  ₹ '+fmt(ctx.parsed.y)+' Mn'}}},scales:{x:{grid:{color:'#e8eef6'},ticks:{color:'#5a6e88',font:{size:11}}},y:{grid:{color:'#e8eef6'},ticks:{color:'#5a6e88',font:{size:11,family:'Noto Sans Mono'},callback:v=>'₹'+fmt(v)}}}}});
+function qs(p) { return '?' + new URLSearchParams(p).toString(); }
+
+async function loadAll() {
+  const f = getFilters();
+  updateBreadcrumb(f);
+  await Promise.all([loadSummary(f), loadTrend(f), loadRegions(f), loadProducts(f), loadDistricts(f), updateTicker(f)]);
 }
-async function loadRegions(f){
-  const data=await fetch(`${API}/regions${qs(f)}`).then(r=>r.json()).catch(()=>null);if(!data)return;
-  document.getElementById('region-table-body').innerHTML=data.map((r,i)=>{
-    const rc=i===0?'top1':i===1?'top2':i===2?'top3':'',gc=r.mom_growth>=0?'pos':'neg',gs=r.mom_growth>=0?'+':'',color=REGION_COLORS[r.region]||'#003366';
-    return`<tr><td><span class="rank-badge ${rc}">${i+1}</span></td><td><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0;"></div><span style="font-weight:600;">${r.region}</span></div></td><td class="num" style="font-weight:700;color:#003366;">₹ ${fmt(r.total_export)}</td><td class="num">₹ ${fmt(r.dec_export)}</td><td class="num">₹ ${fmt(r.nov_export)}</td><td class="num"><span class="growth-chip ${gc}">${gs}${r.mom_growth}%</span></td><td class="num"><div class="share-bar-wrap"><div class="share-bar-bg"><div class="share-bar-fill" style="width:${Math.min(r.share,100)}%"></div></div><span style="font-family:'Noto Sans Mono';font-size:11px;min-width:38px;text-align:right;font-weight:700;">${r.share}%</span></div></td></tr>`;
+async function applyFilters() { await loadAll(); }
+function resetFilters() {
+  document.getElementById('filter-region').value = 'All';
+  document.getElementById('filter-district').value = 'All';
+  document.getElementById('filter-product').value = 'All';
+  loadAll();
+}
+function updateBreadcrumb(f) {
+  document.getElementById('bc-region').textContent = f.region === 'All' ? 'All Regions' : f.region;
+  document.getElementById('bc-district').textContent = f.district === 'All' ? 'All Districts' : f.district;
+}
+
+async function updateTicker(f) {
+  const r = await fetch(`${API}/regions${qs(f)}`).then(r => r.json()).catch(() => []);
+  if (!r.length) return;
+  const top = r[0];
+  document.getElementById('ticker-text').textContent =
+    `🏆 Highest: ${top.region} — ₹${fmt(top.total_export)} Mn     |     ` +
+    r.map(x => `${x.region}: ₹${fmt(x.total_export)} Mn (MoM: ${x.mom_growth >= 0 ? '+' : ''}${x.mom_growth}%)`).join('     |     ');
+}
+
+// ── KPI ──
+async function loadSummary(f) {
+  const d = await fetch(`${API}/summary${qs(f)}`).then(r => r.json()).catch(() => null);
+  if (!d) return;
+  document.getElementById('kpi-total').textContent = '₹ ' + fmt(d.total_export);
+  document.getElementById('kpi-latest').textContent = '₹ ' + fmt(d.latest_month);
+  document.getElementById('kpi-districts').textContent = d.num_districts;
+  document.getElementById('kpi-products').textContent = d.num_products;
+  const s = d.mom_growth >= 0 ? '+' : '', cls = d.mom_growth >= 0 ? 'up' : 'down', a = d.mom_growth >= 0 ? '▲' : '▼';
+  document.getElementById('kpi-growth-badge').innerHTML = `<div class="kpi-badge ${cls}">${a} ${s}${d.mom_growth}% vs Nov '25</div>`;
+}
+
+// ── TREND CHART ──
+async function loadTrend(f) {
+  const data = await fetch(`${API}/monthly-trend${qs(f)}`).then(r => r.json()).catch(() => null);
+  if (!data) return;
+  if (trendChart) { trendChart.destroy(); trendChart = null; }
+  const ctx = document.getElementById('chart-trend').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 210);
+  grad.addColorStop(0, 'rgba(0,51,102,0.18)'); grad.addColorStop(1, 'rgba(0,51,102,0.01)');
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: data.map(d => d.month), datasets: [{ label: 'Export Value (₹ Mn)', data: data.map(d => d.value), borderColor: '#003366', backgroundColor: grad, borderWidth: 2.5, tension: 0.4, fill: true, pointBackgroundColor: '#f15a22', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#003366', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.8)', borderColor: '#f15a22', borderWidth: 1, padding: 10, callbacks: { label: ctx => '  ₹ ' + fmt(ctx.parsed.y) + ' Mn' } } }, scales: { x: { grid: { color: '#e8eef6' }, ticks: { color: '#5a6e88', font: { size: 11 } } }, y: { grid: { color: '#e8eef6' }, ticks: { color: '#5a6e88', font: { size: 11, family: 'Noto Sans Mono' }, callback: v => '₹' + fmt(v) } } } }
+  });
+}
+
+// ── REGIONS TABLE ──
+async function loadRegions(f) {
+  const data = await fetch(`${API}/regions${qs(f)}`).then(r => r.json()).catch(() => null);
+  if (!data) return;
+  document.getElementById('region-table-body').innerHTML = data.map((r, i) => {
+    const rc = i===0?'top1':i===1?'top2':i===2?'top3':'', gc = r.mom_growth>=0?'pos':'neg', gs = r.mom_growth>=0?'+':'';
+    const color = REGION_COLORS[r.region] || '#003366';
+    return `<tr><td><span class="rank-badge ${rc}">${i+1}</span></td><td><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:2px;background:${color};"></div><span style="font-weight:600;">${r.region}</span></div></td><td class="num" style="font-weight:700;color:#003366;">₹ ${fmt(r.total_export)}</td><td class="num">₹ ${fmt(r.dec_export)}</td><td class="num">₹ ${fmt(r.nov_export)}</td><td class="num"><span class="growth-chip ${gc}">${gs}${r.mom_growth}%</span></td><td class="num"><div class="share-bar-wrap"><div class="share-bar-bg"><div class="share-bar-fill" style="width:${Math.min(r.share,100)}%"></div></div><span style="font-family:'Noto Sans Mono';font-size:11px;min-width:38px;text-align:right;font-weight:700;">${r.share}%</span></div></td></tr>`;
   }).join('');
 }
-async function loadDistricts(f){
-  const data=await fetch(`${API}/districts${qs(f)}`).then(r=>r.json()).catch(()=>null);if(!data)return;
-  document.getElementById('district-count-badge').textContent=`${data.length} Districts`;
-  document.getElementById('district-table-body').innerHTML=data.map((d,i)=>{
-    const rc=i===0?'top1':i===1?'top2':i===2?'top3':'',gc=d.mom_growth>=0?'pos':'neg',gs=d.mom_growth>=0?'+':'',color=REGION_COLORS[d.region]||'#003366';
-    return`<tr><td><span class="rank-badge ${rc}">${i+1}</span></td><td style="font-weight:600;">${d.district}</td><td><div style="display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:2px;background:${color};"></div><span style="color:#5a6e88;font-size:11px;">${d.region}</span></div></td><td class="num" style="font-weight:700;color:#003366;">₹ ${fmt(d.total_export)}</td><td class="num">₹ ${fmt(d.dec_export)}</td><td class="num">₹ ${fmt(d.nov_export)}</td><td class="num"><span class="growth-chip ${gc}">${gs}${d.mom_growth}%</span></td><td class="num"><div class="share-bar-wrap"><div class="share-bar-bg"><div class="share-bar-fill" style="width:${Math.min(d.share*3,100)}%"></div></div><span style="font-family:'Noto Sans Mono';font-size:11px;min-width:38px;text-align:right;font-weight:700;">${d.share}%</span></div></td></tr>`;
+
+// ── DISTRICTS TABLE + MAP ──
+async function loadDistricts(f) {
+  const data = await fetch(`${API}/districts${qs(f)}`).then(r => r.json()).catch(() => null);
+  if (!data) return;
+
+  // Cache district data for map tooltips
+  districtDataCache = {};
+  data.forEach(d => { districtDataCache[d.district] = d; });
+
+  document.getElementById('district-count-badge').textContent = `${data.length} Districts`;
+  document.getElementById('map-filter-label').textContent = f.region !== 'All' ? f.region : 'All Districts';
+
+  // Build districts table
+  document.getElementById('district-table-body').innerHTML = data.map((d, i) => {
+    const rc = i===0?'top1':i===1?'top2':i===2?'top3':'', gc = d.mom_growth>=0?'pos':'neg', gs = d.mom_growth>=0?'+':'';
+    const color = REGION_COLORS[d.region] || '#003366';
+    return `<tr><td><span class="rank-badge ${rc}">${i+1}</span></td><td style="font-weight:600;">${d.district}</td><td><div style="display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:2px;background:${color};"></div><span style="color:#5a6e88;font-size:11px;">${d.region}</span></div></td><td class="num" style="font-weight:700;color:#003366;">₹ ${fmt(d.total_export)}</td><td class="num">₹ ${fmt(d.dec_export)}</td><td class="num">₹ ${fmt(d.nov_export)}</td><td class="num"><span class="growth-chip ${gc}">${gs}${d.mom_growth}%</span></td><td class="num"><div class="share-bar-wrap"><div class="share-bar-bg"><div class="share-bar-fill" style="width:${Math.min(d.share*3,100)}%"></div></div><span style="font-family:'Noto Sans Mono';font-size:11px;min-width:38px;text-align:right;font-weight:700;">${d.share}%</span></div></td></tr>`;
   }).join('');
+
+  // Render map
+  await renderDistrictMap(data);
 }
-async function loadProducts(f){
-  const data=await fetch(`${API}/products${qs(f)}`).then(r=>r.json()).catch(()=>null);if(!data)return;
-  document.getElementById('product-list').innerHTML=data.slice(0,8).map((p,i)=>`<div class="product-item"><div class="product-color-bar" style="background:${COLORS[i]}"></div><div class="product-name" title="${p.product}">${p.product}</div><div class="product-val">₹${fmt(p.total_export)} Mn</div><div class="product-share">${p.share}%</div></div>`).join('');
-  const dl=document.getElementById('product-list-detail');
-  if(dl)dl.innerHTML=data.map((p,i)=>`<div class="product-item"><span class="rank-badge ${i===0?'top1':i===1?'top2':i===2?'top3':''}" style="margin-right:6px;">${i+1}</span><div class="product-color-bar" style="background:${COLORS[i]}"></div><div class="product-name" title="${p.product}">${p.product}</div><div class="product-val">₹${fmt(p.total_export)}</div><div class="product-share">${p.share}%</div></div>`).join('');
-  if(productChart){productChart.destroy();productChart=null;}
-  const el=document.getElementById('chart-products');if(!el)return;
-  productChart=new Chart(el.getContext('2d'),{type:'bar',data:{labels:data.map(p=>p.product.length>22?p.product.substring(0,22)+'…':p.product),datasets:[{label:'Export Value (₹ Mn)',data:data.map(p=>p.total_export),backgroundColor:COLORS,borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#003366',titleColor:'#fff',bodyColor:'rgba(255,255,255,0.8)',borderColor:'#f15a22',borderWidth:1,padding:10,callbacks:{label:ctx=>'  ₹ '+fmt(ctx.parsed.x)+' Mn — '+data[ctx.dataIndex].share+'% share'}}},scales:{x:{grid:{color:'#e8eef6'},ticks:{color:'#5a6e88',font:{size:10,family:'Noto Sans Mono'},callback:v=>'₹'+fmt(v)}},y:{grid:{display:false},ticks:{color:'#1a2940',font:{size:11}}}}}});
+
+// ── D3 CHOROPLETH MAP ──
+async function renderDistrictMap(districtData) {
+  const container = document.getElementById('map-container');
+  const loading = document.getElementById('map-loading');
+
+  // Clear previous map
+  d3.select('#map-container svg').remove();
+
+  // Build value lookup
+  const valueMap = {};
+  districtData.forEach(d => { valueMap[d.district] = d.total_export; });
+  const values = districtData.map(d => d.total_export);
+  const maxVal = d3.max(values) || 1;
+
+  // Color scale: light blue → dark navy
+  const colorScale = d3.scaleSequential()
+    .domain([0, maxVal])
+    .interpolator(d3.interpolateBlues);
+
+  // No-data color
+  const noDataColor = '#dde8f0';
+
+  try {
+    // Fetch GeoJSON
+    const geoUrl = 'https://raw.githubusercontent.com/datameet/maps/master/Districts/maharashtra.geojson';
+    const geo = await fetch(geoUrl).then(r => {
+      if (!r.ok) throw new Error('GeoJSON fetch failed');
+      return r.json();
+    });
+
+    loading.style.display = 'none';
+
+    const W = container.offsetWidth || 360;
+    const H = 360;
+
+    const svg = d3.select('#map-container')
+      .insert('svg', '.map-legend')
+      .attr('viewBox', `0 0 ${W} ${H}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet');
+
+    const projection = d3.geoMercator().fitSize([W, H], geo);
+    const pathGen = d3.geoPath().projection(projection);
+    const tooltip = document.getElementById('map-tooltip');
+
+    svg.selectAll('.district-path')
+      .data(geo.features)
+      .enter()
+      .append('path')
+      .attr('class', 'district-path')
+      .attr('d', pathGen)
+      .attr('fill', feat => {
+        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
+        const ourName = NAME_MAP[geoName] || geoName;
+        const val = valueMap[ourName];
+        return val !== undefined ? colorScale(val) : noDataColor;
+      })
+      .on('mousemove', function(event, feat) {
+        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
+        const ourName = NAME_MAP[geoName] || geoName;
+        const d = districtDataCache[ourName];
+
+        document.getElementById('tt-district').textContent = ourName || geoName;
+        document.getElementById('tt-region').textContent = d ? d.region : 'District data';
+        document.getElementById('tt-total').textContent = d ? '₹ ' + fmt(d.total_export) + ' Mn' : 'No data';
+        document.getElementById('tt-dec').textContent = d ? '₹ ' + fmt(d.dec_export) + ' Mn' : '—';
+        document.getElementById('tt-mom').textContent = d ? (d.mom_growth >= 0 ? '+' : '') + d.mom_growth + '%' : '—';
+        document.getElementById('tt-share').textContent = d ? d.share + '%' : '—';
+
+        tooltip.style.display = 'block';
+        tooltip.style.left = (event.clientX + 14) + 'px';
+        tooltip.style.top = (event.clientY - 10) + 'px';
+      })
+      .on('mouseleave', function() {
+        tooltip.style.display = 'none';
+      })
+      .on('click', function(event, feat) {
+        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
+        const ourName = NAME_MAP[geoName] || geoName;
+        // Highlight clicked district in filter
+        const sel = document.getElementById('filter-district');
+        for (let i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === ourName) { sel.selectedIndex = i; break; }
+        }
+      });
+
+    // District labels for larger districts
+    svg.selectAll('.district-label')
+      .data(geo.features)
+      .enter()
+      .append('text')
+      .attr('class', 'district-label')
+      .attr('transform', feat => {
+        const c = pathGen.centroid(feat);
+        return `translate(${c[0]},${c[1]})`;
+      })
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .style('font-size', '6px')
+      .style('font-family', 'Noto Sans, Arial, sans-serif')
+      .style('fill', '#fff')
+      .style('font-weight', '600')
+      .style('pointer-events', 'none')
+      .style('text-shadow', '0 0 3px rgba(0,0,0,0.8)')
+      .text(feat => {
+        const geoName = feat.properties.NAME_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || '';
+        const ourName = NAME_MAP[geoName] || geoName;
+        const val = valueMap[ourName];
+        // Only show label if district has area big enough
+        const bounds = pathGen.bounds(feat);
+        const w = bounds[1][0] - bounds[0][0];
+        return w > 20 ? ourName.split(' ')[0] : '';
+      });
+
+    document.getElementById('map-legend').style.display = 'flex';
+    geoJsonLoaded = true;
+
+  } catch (err) {
+    console.warn('Map load failed:', err);
+    loading.style.display = 'none';
+    // Fallback: show a clean district value list instead
+    container.innerHTML = `
+      <div class="map-error">
+        <div style="font-size:13px;font-weight:700;color:#003366;margin-bottom:12px;">📊 District Export Values</div>
+        <div style="max-height:320px;overflow-y:auto;">
+          ${districtData.slice(0,15).map((d,i) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 16px;border-bottom:1px solid #edf2f7;font-size:11px;">
+              <span style="font-weight:600;color:#1a2940;">${i+1}. ${d.district}</span>
+              <span style="font-family:'Noto Sans Mono',monospace;color:#f15a22;font-weight:700;">₹${fmt(d.total_export)} Mn</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="font-size:10px;color:#999;margin-top:8px;">Map requires internet connection to load GeoJSON</div>
+      </div>`;
+  }
 }
-function switchView(view,btn){
-  document.querySelectorAll('.view-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');
-  document.getElementById('view-overview').style.display=view==='overview'?'':'none';
-  document.getElementById('view-districts').style.display=view==='districts'?'':'none';
-  document.getElementById('view-products').style.display=view==='products'?'':'none';
-  if(view==='products')setTimeout(()=>loadProducts(getFilters()),50);
+
+// ── PRODUCTS ──
+async function loadProducts(f) {
+  const data = await fetch(`${API}/products${qs(f)}`).then(r => r.json()).catch(() => null);
+  if (!data) return;
+  document.getElementById('product-list').innerHTML = data.slice(0,8).map((p,i) => `<div class="product-item"><div class="product-color-bar" style="background:${COLORS[i]}"></div><div class="product-name" title="${p.product}">${p.product}</div><div class="product-val">₹${fmt(p.total_export)} Mn</div><div class="product-share">${p.share}%</div></div>`).join('');
+  const dl = document.getElementById('product-list-detail');
+  if (dl) dl.innerHTML = data.map((p,i) => `<div class="product-item"><span class="rank-badge ${i===0?'top1':i===1?'top2':i===2?'top3':''}" style="margin-right:6px;">${i+1}</span><div class="product-color-bar" style="background:${COLORS[i]}"></div><div class="product-name" title="${p.product}">${p.product}</div><div class="product-val">₹${fmt(p.total_export)}</div><div class="product-share">${p.share}%</div></div>`).join('');
+  if (productChart) { productChart.destroy(); productChart = null; }
+  const el = document.getElementById('chart-products');
+  if (!el) return;
+  productChart = new Chart(el.getContext('2d'), {
+    type: 'bar',
+    data: { labels: data.map(p => p.product.length > 22 ? p.product.substring(0,22)+'…' : p.product), datasets: [{ label: 'Export Value (₹ Mn)', data: data.map(p => p.total_export), backgroundColor: COLORS, borderRadius: 4, borderSkipped: false }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#003366', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.8)', borderColor: '#f15a22', borderWidth: 1, padding: 10, callbacks: { label: ctx => '  ₹ ' + fmt(ctx.parsed.x) + ' Mn — ' + data[ctx.dataIndex].share + '% share' } } }, scales: { x: { grid: { color: '#e8eef6' }, ticks: { color: '#5a6e88', font: { size: 10, family: 'Noto Sans Mono' }, callback: v => '₹' + fmt(v) } }, y: { grid: { display: false }, ticks: { color: '#1a2940', font: { size: 11 } } } } }
+  });
 }
-function fmt(n){if(n===undefined||n===null)return'0';return Number(n).toLocaleString('en-IN');}
-window.addEventListener('DOMContentLoaded',()=>{
-  init().catch(()=>{document.getElementById('ticker-text').textContent='⚠️ Cannot connect to Python API at localhost:5000 — Please run: python app.py in the backend folder';});
+
+function switchView(view, btn) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-overview').style.display = view === 'overview' ? '' : 'none';
+  document.getElementById('view-districts').style.display = view === 'districts' ? '' : 'none';
+  document.getElementById('view-products').style.display = view === 'products' ? '' : 'none';
+  if (view === 'products') setTimeout(() => loadProducts(getFilters()), 50);
+}
+
+function fmt(n) { if (n === undefined || n === null) return '0'; return Number(n).toLocaleString('en-IN'); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  init().catch(() => {
+    document.getElementById('ticker-text').textContent = '⚠️ Cannot connect to API at localhost:5000 — run: python app.py';
+  });
 });
 </script>
 </body>
